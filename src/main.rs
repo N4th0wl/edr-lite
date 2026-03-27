@@ -4,7 +4,7 @@ use chrono::Utc;
 use sha2::{Digest, Sha256};
 use std::{fs::File, io::Read, path::Path};
 
-use edr_lite::{
+use lolbin_watcher::{
     collector::process::collect_process_snapshot,
     detector::rules::RuleEngine,
     logger::jsonl::append_jsonl,
@@ -12,7 +12,7 @@ use edr_lite::{
 };
 
 #[derive(Parser, Debug)]
-#[command(name = "edr-lite", version, about = "EDR-lite: Endpoint Activity Monitor (snapshot-based)")]
+#[command(name = "lolbin-watcher", version)]
 struct Args {
     #[arg(long)]
     once: bool,
@@ -20,7 +20,7 @@ struct Args {
     #[arg(long, default_value_t = 10)]
     interval: u64,
 
-    #[arg(long, default_value = "logs/edr-log.jsonl")]
+    #[arg(long, default_value = "logs/lolbin-watcher.jsonl")]
     out: String,
 
     #[arg(long, default_value = "rules/allowlist.txt")]
@@ -85,7 +85,7 @@ fn run_once(engine: &RuleEngine, out_path: &str) -> Result<()> {
     let line = serde_json::to_string(&evt)?;
     append_jsonl(out_path, &line)?;
 
-    if matches!(evt.severity, edr_lite::models::Severity::Medium | edr_lite::models::Severity::High) {
+    if matches!(evt.severity, lolbin_watcher::models::Severity::Medium | lolbin_watcher::models::Severity::High) {
         println!("{}", line);
     }
 }
