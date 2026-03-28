@@ -52,14 +52,17 @@ fn run_once(engine: &RuleEngine, out_path: &str) -> Result<()> {
 
     for p in snapshot {
     let exe_str = p.exe_path.as_ref().map(|x| x.to_string_lossy().to_string());
+    let orig_fn = p.original_filename.as_deref();
 
-    let quick = engine.quick_flags(&p.name, exe_str.as_deref());
+    let quick = engine.quick_flags(&p.name, exe_str.as_deref(), orig_fn);
 
     let should_hash = quick.iter().any(|f|
         f == "exec_from_temp" ||
         f == "exec_from_downloads" ||
         f == "exec_from_appdata" ||
-        f == "lolbin_process"
+        f == "lolbin_process" ||
+        f == "renamed_binary" ||
+        f == "lolbin_masquerade"
     );
 
     let sha_str = if should_hash {
@@ -74,6 +77,7 @@ fn run_once(engine: &RuleEngine, out_path: &str) -> Result<()> {
     let det = engine.detect(
         &p.name,
         exe_str.as_deref(),
+        orig_fn,
         sha_str.as_deref(),
     );
 
@@ -82,6 +86,7 @@ fn run_once(engine: &RuleEngine, out_path: &str) -> Result<()> {
         pid: p.pid,
         name: p.name,
         exe_path: exe_str,
+        original_filename: p.original_filename,
         sha256: sha_str,
         flags: det.flags,
         severity: det.severity,

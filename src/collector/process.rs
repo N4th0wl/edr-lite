@@ -3,6 +3,8 @@ use std::path::PathBuf;
 use sysinfo::System;
 use std::process::Command;
 
+use super::pe_info;
+
 pub fn is_elevated() -> bool {
     #[cfg(target_os = "windows")]
     {
@@ -22,6 +24,9 @@ pub struct ProcSnapshot {
     pub name: String,
     pub exe_path: Option<PathBuf>,
     pub is_elevated_process: bool,
+    // The OriginalFilename field from the PE VersionInfo resource.
+    // Survives file renames — used to detect renamed LOLBins.
+    pub original_filename: Option<String>,
 }
 
 // Jadi gini Ko, kita pakai ExecutablePath() dari windows API
@@ -94,11 +99,19 @@ pub fn collect_process_snapshot() -> Result<Vec<ProcSnapshot>> {
             .map(|p| p.to_path_buf())
             .or_else(|| query_exe_path_win(pid_u32));
 
+        // Extract OriginalFilename from PE VersionInfo resource.
+        // This survives file renames and is the key to detecting renamed LOLBins.
+        let original_filename = exe_path
+            .as_ref()
+            .and_then(|p| pe_info::read_pe_metadata(p))
+            .and_then(|m| m.original_filename);
+
         out.push(ProcSnapshot {
             pid: pid_u32,
             name,
             exe_path,
             is_elevated_process: false,
+            original_filename,
         });
     }
 

@@ -14,6 +14,7 @@ pub struct ProcEvent {
     pub pid: u32,
     pub name: String,
     pub exe_path: Option<String>,
+    pub original_filename: Option<String>,
     pub sha256: Option<String>,
     pub flags: Vec<String>,
     pub severity: Severity,

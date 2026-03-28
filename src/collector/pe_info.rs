@@ -1,28 +1,28 @@
 use std::path::Path;
 
-/// Metadata extracted from a PE file's version-information resource.
+// Metadata extracted from a PE file's version information resources.
 #[derive(Debug, Clone, Default)]
 pub struct PeMetadata {
-    /// The `OriginalFilename` field from the VS_VERSION_INFO resource.
-    /// This is baked into the binary at compile time and survives renaming.
+    // The `OriginalFilename` field from the VS_VERSION_INFO resource.
+    // This is baked into the binary at compile time and survives renaming.
     pub original_filename: Option<String>,
 }
 
-/// Read PE version-info from an executable on disk.
-///
-/// On Windows we call `GetFileVersionInfoW` / `VerQueryValueW` through FFI.
-/// On non-Windows platforms this is a no-op stub that always returns `None`.
+// Read PE version-info from an executable on disk.
+
+/// Di Windows kita pakai `GetFileVersionInfoW` / `VerQueryValueW` melalui FFI.
+/// Kalau di non-Windows platforms ini cuma no-op stub yang selalu return `None`.
 pub fn read_pe_metadata<P: AsRef<Path>>(path: P) -> Option<PeMetadata> {
     _read_pe_metadata_impl(path.as_ref())
 }
 
-// ── Windows implementation ─────────────────────────────────────────────────
+// Windows implementation
 #[cfg(target_os = "windows")]
 fn _read_pe_metadata_impl(path: &Path) -> Option<PeMetadata> {
     use std::ffi::OsStr;
     use std::os::windows::ffi::OsStrExt;
 
-    // --- FFI declarations (version.dll) ---
+    // FFI declarations (version.dll)
     #[link(name = "version")]
     extern "system" {
         fn GetFileVersionInfoSizeW(
@@ -62,7 +62,7 @@ fn _read_pe_metadata_impl(path: &Path) -> Option<PeMetadata> {
         String::from_utf16_lossy(&slice[..end])
     }
 
-    // 1. Get the size of the version-info block
+    // Get the size of the version-info block
     let file_wide = to_wide(&path.to_string_lossy());
     let mut handle: u32 = 0;
     let size = unsafe { GetFileVersionInfoSizeW(file_wide.as_ptr(), &mut handle) };
@@ -70,7 +70,7 @@ fn _read_pe_metadata_impl(path: &Path) -> Option<PeMetadata> {
         return None;
     }
 
-    // 2. Retrieve the version-info block
+    // Retrieve the version-info block
     let mut data = vec![0u8; size as usize];
     let ok = unsafe {
         GetFileVersionInfoW(file_wide.as_ptr(), handle, size, data.as_mut_ptr())
@@ -79,7 +79,7 @@ fn _read_pe_metadata_impl(path: &Path) -> Option<PeMetadata> {
         return None;
     }
 
-    // 3. Query the translation array to learn the code page/language pair
+    // Query the translation array to learn the code page/language pair
     let translation_key = to_wide("\\VarFileInfo\\Translation");
     let mut trans_ptr: *const u8 = std::ptr::null();
     let mut trans_len: u32 = 0;
@@ -102,7 +102,7 @@ fn _read_pe_metadata_impl(path: &Path) -> Option<PeMetadata> {
         (words[0], words[1])
     };
 
-    // 4. Build the sub-block path for OriginalFilename
+    // Build the sub-block path for OriginalFilename
     let sub_block = format!(
         "\\StringFileInfo\\{:04x}{:04x}\\OriginalFilename",
         lang_id, code_page
@@ -130,7 +130,7 @@ fn _read_pe_metadata_impl(path: &Path) -> Option<PeMetadata> {
     Some(PeMetadata { original_filename })
 }
 
-// ── Non-Windows stub ───────────────────────────────────────────────────────
+// Non-Windows stub
 #[cfg(not(target_os = "windows"))]
 fn _read_pe_metadata_impl(_path: &Path) -> Option<PeMetadata> {
     None
