@@ -18,9 +18,6 @@ struct Args {
     #[arg(long)]
     once: bool,
 
-    #[arg(long, default_value_t = 10)]
-    interval: u64,
-
     #[arg(long, default_value = "logs/lolbin-watcher.jsonl")]
     out: String,
 
@@ -43,7 +40,6 @@ fn main() -> Result<()> {
 
     loop {
         run_once(&engine, &args.out)?;
-        std::thread::sleep(std::time::Duration::from_secs(args.interval));
     }
 }
 
